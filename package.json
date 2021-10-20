@@ -1,0 +1,26 @@
+{
+  "name": "robocalltranscripe",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TaoJiang98/RobocallTranscripe.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TaoJiang98/RobocallTranscripe/issues"
+  },
+  "homepage": "https://github.com/TaoJiang98/RobocallTranscripe#readme",
+  "dependencies": {
+    "@google-cloud/speech": "^4.9.0",
+    "aws-sdk": "^2.1011.0",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "ws": "^7.4.3"
+  }
+}
