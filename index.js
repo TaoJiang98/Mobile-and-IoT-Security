@@ -60,13 +60,12 @@ wss.on('connection', (ws) => {
         switch(msg.event) {
             case "connected":
                 console.log(`A new call has connected`);
-                content = []
+                contentStr = "";
                 recognizeStream = client
                 .streamingRecognize(request)
                 .on("error", console.error)
                 .on("data", data => {
                     console.log(data.results[0].alternatives[0].transcript);
-                    //content.push(data.results[0].alternatives[0].transcript);
                     contentStr += data.results[0].alternatives[0].transcript;
                 });
                 break;
