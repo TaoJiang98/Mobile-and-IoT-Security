@@ -18,7 +18,7 @@ AWS.config.update(awsConfig);
 let docClient = new AWS.DynamoDB.DocumentClient();
 let insert = function (content) {
     var input = {
-        "date" : new Date().toDateString(),
+        "date" : new Date().toISOString(),
         "content": content
     }
     var params = {
