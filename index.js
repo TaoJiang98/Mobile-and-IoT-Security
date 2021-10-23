@@ -20,10 +20,11 @@ let awsConfig = {
 AWS.config.update(awsConfig);
 
 let docClient = new AWS.DynamoDB.DocumentClient();
-let insert = function (content) {
+let insert = function (content, status) {
     var input = {
         "date" : new Date().toISOString(),
-        "content": content
+        "content": content,
+        "status": status
     }
     var params = {
         TableName: "CallContent",
@@ -66,6 +67,8 @@ function findUnique() {
     console.log("the content is " + contentStr);
 }
 
+var contents = [];
+
 wss.on('connection', (ws) => {
     console.log('New Connection Initiated');
 
@@ -76,18 +79,20 @@ wss.on('connection', (ws) => {
         switch(msg.event) {
             case "connected":
                 console.log(`A new call has connected`);
-                contentStr = "";
-                map = new Map();
+                contents = [];
+                //contentStr = "";
+                //map = new Map();
                 recognizeStream = client
                 .streamingRecognize(request)
                 .on("error", console.error)
                 .on("data", data => {
                     const curTrans = data.results[0].alternatives[0].transcript;
-                    if (map.has(curTrans)) {
-                        map.set(curTrans, map.get(curTrans) + 1);
-                    } else {
-                        map.set(curTrans, 1);
-                    }
+                    // if (map.has(curTrans)) {
+                    //     map.set(curTrans, map.get(curTrans) + 1);
+                    // } else {
+                    //     map.set(curTrans, 1);
+                    // }
+                    contents.push(curTrans);
                     console.log(data.results[0].alternatives[0].transcript);
                 })
                 break;
@@ -101,19 +106,26 @@ wss.on('connection', (ws) => {
             case "stop":
                 console.log(`Call Has Ended`);
                 recognizeStream.destroy();
-                findUnique();
-                //pop stuff into DB
-                insert(contentStr);
-                
+                // fraud or normal
+                var callStatus = "normal";
+                // remove duplicate prefix
+                //findUnique();                
                 //call tha flask app find out what type of call it is
-                axios.post(url, JSON.stringify({'calltext': contentStr}))
+                var lastElement = contents[contents.length - 1];
+                console.log("content is : " + lastElement);
+                axios.post(url, JSON.stringify({'calltext': lastElement}))
 					.then (res => {
-						console.log('status code  ${res.status}')
-						console.log(res)
-						})
+						console.log('status code  ${res.status}');
+						console.log(res.data);
+                        if (res.data.includes("fraud")) {
+                            callStatus = "fraud";
+                        }
+					})
 					.catch(error=>{
 						console.error(error)
-						});
+					});
+                //pop stuff into DB
+                insert(lastElement, callStatus);
                 break;
         }
     });
