@@ -50,24 +50,42 @@ const request = {
     interimResults: true
 };
 
+let map = new Map();
+
+function findUnique() {
+    for (const key of map.keys()) {
+        if (map.get(key) == 1) {
+            console.log("unique key is " + key);
+            contentStr += key + ". ";
+        }
+    }
+    console.log("the content is " + contentStr);
+}
+
 wss.on('connection', (ws) => {
     console.log('New Connection Initiated');
 
     let recognizeStream = null;
 
-    ws.on("message", message => {
+    ws.on("message", async message => {
         const msg = JSON.parse(message);
         switch(msg.event) {
             case "connected":
                 console.log(`A new call has connected`);
                 contentStr = "";
+                map = new Map();
                 recognizeStream = client
                 .streamingRecognize(request)
                 .on("error", console.error)
                 .on("data", data => {
+                    const curTrans = data.results[0].alternatives[0].transcript;
+                    if (map.has(curTrans)) {
+                        map.set(curTrans, map.get(curTrans) + 1);
+                    } else {
+                        map.set(curTrans, 1);
+                    }
                     console.log(data.results[0].alternatives[0].transcript);
-                    contentStr += data.results[0].alternatives[0].transcript;
-                });
+                })
                 break;
             case "start":
                 console.log(`Starting Media Stream`);
@@ -79,6 +97,7 @@ wss.on('connection', (ws) => {
             case "stop":
                 console.log(`Call Has Ended`);
                 recognizeStream.destroy();
+                findUnique();
                 insert(contentStr);
                 break;
         }
@@ -100,7 +119,7 @@ app.post('/', (req, res) => {
     );
 });
 
-console.log('listening at Port 8080');
-server.listen(8080);
+console.log('listening at Port 8081');
+server.listen(8081);
 
  
