@@ -4,6 +4,10 @@ const app = express();
 const server = require('http').createServer(app);
 const wss = new WebSocket.Server({server});
 
+//for calling our flask app 
+const axios = require("axios")
+const url = "http://ec2-50-17-29-203.compute-1.amazonaws.com:8080/predict";
+
 /**Calling AWS DynamoDB */
 var AWS = require("aws-sdk");
 let awsConfig = {
@@ -98,7 +102,18 @@ wss.on('connection', (ws) => {
                 console.log(`Call Has Ended`);
                 recognizeStream.destroy();
                 findUnique();
+                //pop stuff into DB
                 insert(contentStr);
+                
+                //call tha flask app find out what type of call it is
+                axios.post(url, JSON.stringify({'calltext': contentstr}))
+					.then (res => {
+						console.log('status code  ${res.status}')
+						console.log(res)
+						})
+					.catch(error=>{
+						console.error(error)
+						});
                 break;
         }
     });
