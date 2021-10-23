@@ -106,7 +106,7 @@ wss.on('connection', (ws) => {
                 insert(contentStr);
                 
                 //call tha flask app find out what type of call it is
-                axios.post(url, JSON.stringify({'calltext': contentstr}))
+                axios.post(url, JSON.stringify({'calltext': contentStr}))
 					.then (res => {
 						console.log('status code  ${res.status}')
 						console.log(res)
