@@ -13,8 +13,8 @@ var AWS = require("aws-sdk");
 let awsConfig = {
     "region": "us-east-1",
     "endpoint": "http://dynamodb.us-east-1.amazonaws.com",
-    "accessKeyId": "",
-    "secretAccessKey": ""
+    "accessKeyId": "AKIATEHMKKUJB7OVWIUV",
+    "secretAccessKey": "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"
 };
 
 AWS.config.update(awsConfig);
@@ -32,9 +32,9 @@ let insert = function (content, status) {
     };
     docClient.put(params, function (err, data) {
         if (err) {
-            console.log("insert error: " + JSON.stringify(err, null, 2));
+            console.log("database insert error: " + JSON.stringify(err, null, 2));
         } else {
-            console.log("insert: success");
+            console.log("database insert: success");
         }
     })
 }
@@ -43,8 +43,6 @@ require('dotenv').config();
 
 const speech = require('@google-cloud/speech');
 const client = new speech.SpeechClient();
-
-var contentStr = ""
 
 const request = {
     config: {
@@ -55,24 +53,23 @@ const request = {
     interimResults: true
 };
 
-let map = new Map();
-
-function findUnique() {
-    for (const key of map.keys()) {
-        if (map.get(key) == 1) {
-            console.log("unique key is " + key);
-            contentStr += key + ". ";
+function helper(contents) {
+    var res = "";
+    for (let i = 0; i < contents.length - 1; i++) {
+        if (contents[i].length > contents[i + 1].length) {
+            res += contents[i];
         }
     }
-    console.log("the content is " + contentStr);
+    res += contents[contents.length - 1];
+    return res;
 }
 
 var contents = [];
 
 wss.on('connection', (ws) => {
     console.log('New Connection Initiated');
-
     let recognizeStream = null;
+    var currentDate = new Date();
 
     ws.on("message", async message => {
         const msg = JSON.parse(message);
@@ -80,27 +77,46 @@ wss.on('connection', (ws) => {
             case "connected":
                 console.log(`A new call has connected`);
                 contents = [];
-                //contentStr = "";
-                //map = new Map();
+                var count = 0;
                 recognizeStream = client
-                .streamingRecognize(request)
-                .on("error", console.error)
-                .on("data", data => {
-                    const curTrans = data.results[0].alternatives[0].transcript;
-                    // if (map.has(curTrans)) {
-                    //     map.set(curTrans, map.get(curTrans) + 1);
-                    // } else {
-                    //     map.set(curTrans, 1);
-                    // }
-                    contents.push(curTrans);
-                    console.log(data.results[0].alternatives[0].transcript);
-                })
+                    .streamingRecognize(request)
+                    .on("error", console.error)
+                    .on("data", data => {
+                        const curTrans = data.results[0].alternatives[0].transcript;
+                        contents.push(curTrans);
+                        console.log(data.results[0].alternatives[0].transcript);
+
+                        if (Math.abs(new Date() - currentDate) / 1000 >= 8 && count == 0) {
+                            console.log("The phone call is 8 seconds now");
+                            const firstClassify = helper(contents);
+                            console.log("The contents speaker said is " + firstClassify);
+                            axios.post(url, JSON.stringify({'calltext': firstClassify}))
+                                .then (res => {
+                                    console.log("The result from classified model is " + res.data);
+                                })
+                            count += 1;
+                        }
+                        if (curTrans.includes("press")) {
+                            console.log("press detected");
+                            // app.post('/', (req, res) => {
+                            //     res.send(
+                            //         `<Response>
+                            //             <Say>
+                            //                 Press
+                            //             </Say>
+                            //             <Pause length="60" />
+                            //         </Response>`
+                            //     )
+                            // })
+                        }
+
+                    });
+
                 break;
             case "start":
                 console.log(`Starting Media Stream`);
                 break;
             case "media":
-                //console.log(`Receiving Audio...`);
                 recognizeStream.write(msg.media.payload);
                 break;
             case "stop":
@@ -111,21 +127,22 @@ wss.on('connection', (ws) => {
                 // remove duplicate prefix
                 //findUnique();                
                 //call tha flask app find out what type of call it is
-                var lastElement = contents[contents.length - 1];
-                console.log("content is : " + lastElement);
-                axios.post(url, JSON.stringify({'calltext': lastElement}))
+                var element = helper(contents);
+                console.log("content is : " + element);
+                
+                axios.post(url, JSON.stringify({'calltext': element}))
 					.then (res => {
-						console.log('status code  ${res.status}');
+						//console.log('status code  ${res.status}');
 						console.log(res.data);
                         if (res.data.includes("fraud")) {
                             callStatus = "fraud";
                         }
 					})
 					.catch(error=>{
-						console.error(error)
+						console.error(error);
 					});
                 //pop stuff into DB
-                insert(lastElement, callStatus);
+                //insert(lastElement, callStatus);
                 break;
         }
     });
@@ -146,7 +163,7 @@ app.post('/', (req, res) => {
     );
 });
 
-console.log('listening at Port 8081');
-server.listen(8081);
+console.log('listening at Port 8080');
+server.listen(8080);
 
  
