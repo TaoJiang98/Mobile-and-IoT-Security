@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 const server = require('http').createServer(app);
 const wss = new WebSocket.Server({server});
+const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
 //for calling our flask app 
 const axios = require("axios")
@@ -13,8 +14,8 @@ var AWS = require("aws-sdk");
 let awsConfig = {
     "region": "us-east-1",
     "endpoint": "http://dynamodb.us-east-1.amazonaws.com",
-    "accessKeyId": "AKIATEHMKKUJB7OVWIUV",
-    "secretAccessKey": "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"
+    "accessKeyId": "",
+    "secretAccessKey": ""
 };
 
 AWS.config.update(awsConfig);
@@ -65,6 +66,7 @@ function helper(contents) {
 }
 
 var contents = [];
+const response = new VoiceResponse();
 
 wss.on('connection', (ws) => {
     console.log('New Connection Initiated');
@@ -96,20 +98,9 @@ wss.on('connection', (ws) => {
                                 })
                             count += 1;
                         }
-                        if (curTrans.includes("press")) {
-                            console.log("press detected");
-                            // app.post('/', (req, res) => {
-                            //     res.send(
-                            //         `<Response>
-                            //             <Say>
-                            //                 Press
-                            //             </Say>
-                            //             <Pause length="60" />
-                            //         </Response>`
-                            //     )
-                            // })
-                        }
-
+                        // if (curTrans.includes("press")) {
+                        //     response.say('Hello World');
+                        // }
                     });
 
                 break;
