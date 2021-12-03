@@ -3,7 +3,10 @@ const express = require('express');
 const app = express();
 const server = require('http').createServer(app);
 const wss = new WebSocket.Server({server});
-const VoiceResponse = require('twilio').twiml.VoiceResponse;
+//const VoiceResponse = require('twilio').twiml.VoiceResponse;
+const {TextToSpeech, PlayKey } = require('./utils');
+var bodyParser = require('body-parser');
+app.use(bodyParser.urlencoded({ extended: false }));
 
 //for calling our flask app 
 const axios = require("axios")
@@ -17,15 +20,20 @@ let awsConfig = {
     "accessKeyId": "",
     "secretAccessKey": ""
 };
+var callerNumber = "";
+var probability = "";
 
 AWS.config.update(awsConfig);
 
 let docClient = new AWS.DynamoDB.DocumentClient();
-let insert = function (content, status) {
+
+let insert = function (contents, status) {
     var input = {
         "date" : new Date().toISOString(),
-        "content": content,
-        "status": status
+        "caller": callerNumber,
+        "content": contents.join(),
+        "status": status,
+        "probability": probability
     }
     var params = {
         TableName: "CallContent",
@@ -35,7 +43,7 @@ let insert = function (content, status) {
         if (err) {
             console.log("database insert error: " + JSON.stringify(err, null, 2));
         } else {
-            console.log("database insert: success");
+            console.log("[Database]Insert: success");
         }
     })
 }
@@ -49,110 +57,142 @@ const request = {
     config: {
         encoding: "MULAW",
         sampleRateHertz: 8000,
-        languageCode: "en-US"
+        languageCode: "en-US",
+        speechContexts: [{
+            "phrases": ["please press $OOV_CLASS_FULLPHONENUM"],
+        }]
     },
-    interimResults: true
+    interimResults: false,
 };
 
-function helper(contents) {
-    var res = "";
-    for (let i = 0; i < contents.length - 1; i++) {
-        if (contents[i].length > contents[i + 1].length) {
-            res += contents[i];
-        }
-    }
-    res += contents[contents.length - 1];
-    return res;
-}
+const recognizeStreamToContents = new Map();
 
-var contents = [];
-const response = new VoiceResponse();
+const recogNizeStreamToId = {};
+
+const handleRecognizeStreamText = async (webSocket, stream, data, connectedTime) => {
+    const curTrans = data.results[0].alternatives[0].transcript;
+    if (!!recognizeStreamToContents.get(stream)) {
+        recognizeStreamToContents.get(stream).push(curTrans);
+    }
+    console.log(curTrans);
+
+    if (Math.abs(new Date() - connectedTime) / 1000 >= 8) {
+        console.log();
+        console.log(`[Pre Classify]`);
+        var preContent = recognizeStreamToContents.get(stream);
+        axios.post(url, JSON.stringify({'calltext': preContent}))
+        .then (res => {
+            console.log(res.data);
+        })
+        .catch(error=>{
+            console.error(error);
+        });
+    }
+
+    if (curTrans.includes("please press")) {
+        // console.log("[handleRecognizeStreamText] phrase 'please press' detected.");
+        // console.log("[handleRecognizeStreamText] Current sentence is", curTrans);
+
+        const words = curTrans.split(' ');
+        const key = words[words.length - 1];
+
+        const speech = await TextToSpeech('Pressing the key for ' + key);
+        const speechData = {
+            event: 'media',
+            streamSid: recogNizeStreamToId[stream],
+            media: {
+                payload: speech
+            }
+        };
+        const keyTone = await PlayKey(key);
+        const keyToneData = {
+            event: 'media',
+            streamSid: recogNizeStreamToId[stream],
+            media: {
+                payload: keyTone,
+            }
+        };
+
+        webSocket.send(JSON.stringify(speechData), (err) => {
+            if (!!err) {
+                console.log('Error is', err);
+            }
+        });
+        webSocket.send(JSON.stringify(keyToneData), (err) => {
+            if (!!err) {
+                console.log('Error is', err);
+            }
+        });
+    }
+};
+
 
 wss.on('connection', (ws) => {
-    console.log('New Connection Initiated');
     let recognizeStream = null;
-    var currentDate = new Date();
+
+    var connectedTime = new Date();
 
     ws.on("message", async message => {
         const msg = JSON.parse(message);
         switch(msg.event) {
             case "connected":
-                console.log(`A new call has connected`);
-                contents = [];
-                var count = 0;
-                recognizeStream = client
-                    .streamingRecognize(request)
-                    .on("error", console.error)
-                    .on("data", data => {
-                        const curTrans = data.results[0].alternatives[0].transcript;
-                        contents.push(curTrans);
-                        console.log(data.results[0].alternatives[0].transcript);
-
-                        if (Math.abs(new Date() - currentDate) / 1000 >= 8 && count == 0) {
-                            console.log("The phone call is 8 seconds now");
-                            const firstClassify = helper(contents);
-                            console.log("The contents speaker said is " + firstClassify);
-                            axios.post(url, JSON.stringify({'calltext': firstClassify}))
-                                .then (res => {
-                                    console.log("The result from classified model is " + res.data);
-                                })
-                            count += 1;
-                        }
-                        // if (curTrans.includes("press")) {
-                        //     response.say('Hello World');
-                        // }
-                    });
-
+                console.log(`[Stream Message] A new call has connected`);
+                recognizeStream = client.streamingRecognize(request);
+                recognizeStream
+                .on("error", console.error)
+                .on("data", (data) => handleRecognizeStreamText(ws, recognizeStream, data, connectedTime));
                 break;
             case "start":
-                console.log(`Starting Media Stream`);
+                console.log(`[Stream Message] Starting Media Stream`);
+                recogNizeStreamToId[recognizeStream] = msg.start.streamSid;
+                recognizeStreamToContents.set(recognizeStream, []);
                 break;
             case "media":
+                //console.log('[Stream Message] Streaming media to recognize stream');
                 recognizeStream.write(msg.media.payload);
                 break;
             case "stop":
-                console.log(`Call Has Ended`);
+                console.log(`[Stream Message] Call Has Ended`);
                 recognizeStream.destroy();
                 // fraud or normal
-                var callStatus = "normal";
-                // remove duplicate prefix
-                //findUnique();                
+                var callStatus = "normal";             
                 //call tha flask app find out what type of call it is
-                var element = helper(contents);
-                console.log("content is : " + element);
-                
-                axios.post(url, JSON.stringify({'calltext': element}))
+                const contents = recognizeStreamToContents.get(recognizeStream);
+                console.log();
+                console.log("[Final Classify]" + contents);
+                axios.post(url, JSON.stringify({'calltext': contents}))
 					.then (res => {
-						//console.log('status code  ${res.status}');
-						console.log(res.data);
+                        probability = res.data.substring(res.data.indexOf("probability") + 12);
+                        // console.log("probability is: " + probability);
+						console.log('[Result]', res.data);
                         if (res.data.includes("fraud")) {
                             callStatus = "fraud";
                         }
+                        //pop stuff into DB
+                        insert(contents, callStatus);
 					})
 					.catch(error=>{
 						console.error(error);
 					});
-                //pop stuff into DB
-                //insert(lastElement, callStatus);
+                recognizeStreamToContents.delete(recognizeStream);
                 break;
         }
     });
 });
 
 app.post('/', (req, res) => {
+    callerNumber = req.body.Caller;
     res.set('Content-Type', "text/xml");
     res.send(
         `<Response>
-            <Start>
+            <Say voice="alice">Moshi Moshi</Say>
+            <Connect>              
                 <Stream url="wss://${req.headers.host}"/>
-            </Start>
-            <Say>
-                I will stream the next 60 seconds of audio
-            </Say>
-            <Pause length="60" />
+            </Connect>
         </Response>`
     );
 });
+
 
 console.log('listening at Port 8080');
 server.listen(8080);
