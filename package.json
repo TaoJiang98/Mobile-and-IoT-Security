@@ -18,12 +18,14 @@
   "homepage": "https://github.com/TaoJiang98/RobocallTranscripe#readme",
   "dependencies": {
     "@google-cloud/speech": "^4.9.0",
+    "@google-cloud/text-to-speech": "^3.3.1",
     "aws-sdk": "^2.1011.0",
     "axios": "^0.23.0",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "linear16": "^1.2.0",
     "twilio": "^3.71.2",
+    "wavefile": "^11.0.0",
     "ws": "^7.4.3"
   }
 }

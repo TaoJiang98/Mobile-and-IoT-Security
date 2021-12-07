@@ -3,7 +3,6 @@ const express = require('express');
 const app = express();
 const server = require('http').createServer(app);
 const wss = new WebSocket.Server({server});
-//const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const {TextToSpeech, PlayKey } = require('./utils');
 var bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -11,23 +10,21 @@ app.use(bodyParser.urlencoded({ extended: false }));
 //for calling our flask app 
 const axios = require("axios")
 const url = "http://ec2-50-17-29-203.compute-1.amazonaws.com:8080/predict";
-
 /**Calling AWS DynamoDB */
 var AWS = require("aws-sdk");
 let awsConfig = {
-    "region": "us-east-1",
-    "endpoint": "http://dynamodb.us-east-1.amazonaws.com",
+    "region": "",
+    "endpoint": "",
     "accessKeyId": "",
     "secretAccessKey": ""
 };
 var callerNumber = "";
-var probability = "";
 
 AWS.config.update(awsConfig);
 
 let docClient = new AWS.DynamoDB.DocumentClient();
 
-let insert = function (contents, status) {
+let insert = function (contents, status, probability) {
     var input = {
         "date" : new Date().toISOString(),
         "caller": callerNumber,
@@ -68,7 +65,7 @@ const request = {
 const recognizeStreamToContents = new Map();
 
 const recogNizeStreamToId = {};
-
+var count = 0;
 const handleRecognizeStreamText = async (webSocket, stream, data, connectedTime) => {
     const curTrans = data.results[0].alternatives[0].transcript;
     if (!!recognizeStreamToContents.get(stream)) {
@@ -76,11 +73,12 @@ const handleRecognizeStreamText = async (webSocket, stream, data, connectedTime)
     }
     console.log(curTrans);
 
-    if (Math.abs(new Date() - connectedTime) / 1000 >= 8) {
+    if (Math.abs(new Date() - connectedTime) / 1000 >= 8 && count == 0) {
+	count += 1;
         console.log();
         console.log(`[Pre Classify]`);
         var preContent = recognizeStreamToContents.get(stream);
-        axios.post(url, JSON.stringify({'calltext': preContent}))
+        axios.post(url, JSON.stringify("calltext=" + preContent.toString()))
         .then (res => {
             console.log(res.data);
         })
@@ -157,19 +155,23 @@ wss.on('connection', (ws) => {
                 // fraud or normal
                 var callStatus = "normal";             
                 //call tha flask app find out what type of call it is
-                const contents = recognizeStreamToContents.get(recognizeStream);
-                console.log();
-                console.log("[Final Classify]" + contents);
-                axios.post(url, JSON.stringify({'calltext': contents}))
-					.then (res => {
-                        probability = res.data.substring(res.data.indexOf("probability") + 12);
-                        // console.log("probability is: " + probability);
-						console.log('[Result]', res.data);
+                var contents = recognizeStreamToContents.get(recognizeStream);
+                var contentsStr = contents.toString();
+		console.log();
+		//console.log('[TYPE]' + typeof(contents));
+                console.log("[Final Classify]" + contentsStr);
+
+		axios.post(url, JSON.stringify("calltext=" + contentsStr)) 
+			.then (res => {
+			//console.log("[RES]", res)
+			var probability = res.data.substring(res.data.indexOf("probability") + 12);
+                        console.log("probability is: " + probability);
+			console.log('[Result]', res.data);
                         if (res.data.includes("fraud")) {
                             callStatus = "fraud";
                         }
                         //pop stuff into DB
-                        insert(contents, callStatus);
+                        insert(contents, callStatus, probability);
 					})
 					.catch(error=>{
 						console.error(error);
@@ -194,7 +196,7 @@ app.post('/', (req, res) => {
 });
 
 
-console.log('listening at Port 8080');
-server.listen(8080);
+console.log('listening at Port 8082');
+server.listen(8082);
 
  
