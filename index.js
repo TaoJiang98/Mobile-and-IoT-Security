@@ -12,12 +12,7 @@ const axios = require("axios")
 const url = "http://ec2-50-17-29-203.compute-1.amazonaws.com:8080/predict";
 /**Calling AWS DynamoDB */
 var AWS = require("aws-sdk");
-let awsConfig = {
-    "region": "",
-    "endpoint": "",
-    "accessKeyId": "",
-    "secretAccessKey": ""
-};
+
 var callerNumber = "";
 
 AWS.config.update(awsConfig);
