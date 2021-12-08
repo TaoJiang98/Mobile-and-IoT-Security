@@ -15,6 +15,13 @@ var AWS = require("aws-sdk");
 
 var callerNumber = "";
 
+let awsConfig = {
+    "region": "us-east-1",
+    "endpoint": "http://dynamodb.us-east-1.amazonaws.com",
+    "accessKeyId": "AKIATEHMKKUJB7OVWIUV",
+    "secretAccessKey": "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"
+};
+
 AWS.config.update(awsConfig);
 
 let docClient = new AWS.DynamoDB.DocumentClient();
@@ -60,7 +67,6 @@ const request = {
 const recognizeStreamToContents = new Map();
 
 const recogNizeStreamToId = {};
-var count = 0;
 const handleRecognizeStreamText = async (webSocket, stream, data, connectedTime) => {
     const curTrans = data.results[0].alternatives[0].transcript;
     if (!!recognizeStreamToContents.get(stream)) {
@@ -83,8 +89,8 @@ const handleRecognizeStreamText = async (webSocket, stream, data, connectedTime)
     }
 
     if (curTrans.includes("please press")) {
-        // console.log("[handleRecognizeStreamText] phrase 'please press' detected.");
-        // console.log("[handleRecognizeStreamText] Current sentence is", curTrans);
+        console.log("[handleRecognizeStreamText] phrase 'please press' detected.");
+        console.log("[handleRecognizeStreamText] Current sentence is", curTrans);
 
         const words = curTrans.split(' ');
         const key = words[words.length - 1];
@@ -119,7 +125,7 @@ const handleRecognizeStreamText = async (webSocket, stream, data, connectedTime)
     }
 };
 
-
+var count = 0;
 wss.on('connection', (ws) => {
     let recognizeStream = null;
 
@@ -130,6 +136,7 @@ wss.on('connection', (ws) => {
         switch(msg.event) {
             case "connected":
                 console.log(`[Stream Message] A new call has connected`);
+                count = 0;
                 recognizeStream = client.streamingRecognize(request);
                 recognizeStream
                 .on("error", console.error)
@@ -160,7 +167,6 @@ wss.on('connection', (ws) => {
 			.then (res => {
 			//console.log("[RES]", res)
 			var probability = res.data.substring(res.data.indexOf("probability") + 12);
-                        console.log("probability is: " + probability);
 			console.log('[Result]', res.data);
                         if (res.data.includes("fraud")) {
                             callStatus = "fraud";
