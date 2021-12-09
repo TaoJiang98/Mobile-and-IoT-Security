@@ -2,7 +2,8 @@
 
 ## How to run or software:
 
-##Call Transciber:
+## Call Transciber:
+
 Useful Link: https://www.twilio.com/blog/live-transcribing-phone-calls-using-twilio-media-streams-and-google-speech-text?utm_source=youtube&utm_medium=video&utm_campaign=project_saiyan&utm_content=transcribe_calls
 1. Have Twilio Account (created by Tu)
 2. Create your own Google Cloud Account
@@ -18,7 +19,7 @@ Useful Link: https://www.twilio.com/blog/live-transcribing-phone-calls-using-twi
 6. npm intall (install all other packages)
 7. node index.js (run the js program)
 
-##ML Models:
+## ML Models:
 
 ### Prerequisite
 Install the following python packages:
@@ -37,12 +38,12 @@ Using *main.py* to generate models. It requires path to train data, portion (of 
 
 Additionally, note that the Call Classifying Python Notebook is quite out of date, and is solely representative of our inital attempt to create a model. 
 
-##Flask App:
+## Flask App:
 
 Install all dependencies, they are listed in requirements.txt.
 
 Assuming one places the "newvectorizer.sav" and "decisiontree.sav" files in the same directory as the flask app after creation (we have already inserted them) the flask app should run without issue. This can be done by calling either flask run, or python3 app.py from your terminal in the folder containing the app. The only difference between this version of the app and the one currently running on AWS is that this version runs in debug mode for developer convenience. This will run it on port 5000. The developer version deployed to AWS has this changed to run in deoyment mode on port 8080. We ran it using the command nohup python3 app.py
 
-##User Study Website
+## User Study Website
 
 public_html contians all of the code and files running at cs.virginia.edu/~jss5ha which we use to host all of the information about our user study. It will run as is if deployed anywhere. It also has the relevant files one can download from that website.  
