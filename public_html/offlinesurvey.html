@@ -1,0 +1,39 @@
+<html>
+<body>
+<p>If you are a offline user, please complete the survey linked below and navigate to the next page after that. Your data is not usable without completing the survey.</p>
+
+        <p id="uid"></p>
+  
+        <script>
+          
+            // Convert to 32bit integer
+            function stringToHash(string) {
+                  
+                var hash = 0;
+                  
+                if (string.length == 0) return hash;
+                  
+                for (i = 0; i < string.length; i++) {
+                    char = string.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                  
+                return Math.abs(hash);
+            }
+              
+            // String printing in hash
+            var gfg = new Date();
+	    gfg = gfg.toString();
+              
+            document.getElementById("uid").innerHTML
+                        = "This is your User ID " + stringToHash(gfg);
+        </script>
+<p>You MUST remeber your User ID, if you lose it you will not be able to be compensated.</p>
+<a href="https://forms.gle/nJxWaw23mcPrXHTx9"><button>UVA Participant Survey</button></a>
+</br>
+</br>
+<p>DO NOT navigate to the download page until you complete the survey linked above</p>
+<a href="inbetweenpage.html"><button>Download Page</button></a>
+</body>
+</html>
