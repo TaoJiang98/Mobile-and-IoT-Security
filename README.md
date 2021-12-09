@@ -20,6 +20,8 @@ Useful Link: https://www.twilio.com/blog/live-transcribing-phone-calls-using-twi
 
 ML Models:
 
+Additionally, note that the Call Classifying Python Notebook is quite out of date, and is solely representative of our inital attempt to create a model. 
+
 Flask App:
 
 Install all dependencies, they are listed in requirements.txt.
