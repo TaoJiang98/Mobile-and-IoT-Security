@@ -15,13 +15,6 @@ var AWS = require("aws-sdk");
 
 var callerNumber = "";
 
-let awsConfig = {
-    "region": "us-east-1",
-    "endpoint": "http://dynamodb.us-east-1.amazonaws.com",
-    "accessKeyId": "AKIATEHMKKUJB7OVWIUV",
-    "secretAccessKey": "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"
-};
-
 AWS.config.update(awsConfig);
 
 let docClient = new AWS.DynamoDB.DocumentClient();
