@@ -92,6 +92,11 @@ print('RFRecall =', Recall_RF)
 F1_Score_RF = 2 * Precision_RF * Recall_RF / (Precision_RF + Recall_RF)
 print('RFF1 =', F1_Score_RF)
 
+#can change the file destinations as appropriate. 
+#need to get my model into a binary form
+pickle.dump(classifierDT, open("../../fraudcallmodeltesting/DecisionTree.sav", "wb"))
+pickle.dump(cv, open("../../fraudcallmodeltesting/newvectorizer.sav", "wb"))
+
 Accuracy = [Accuracy_RF, Accuracy_DT, Accuracy_NB]
 Methods = ['Random_Forest', 'Decision_Trees', 'Naive_Bayes']
 Accuracy_pos = np.arange(len(Methods))
