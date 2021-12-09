@@ -21,5 +21,7 @@ Useful Link: https://www.twilio.com/blog/live-transcribing-phone-calls-using-twi
 ML Models:
 
 Flask App:
-Install all dependencies, they are listed in requirements.txt
+
+Install all dependencies, they are listed in requirements.txt.
+
 Assuming one places the "newvectorizer.sav" and "decisiontree.sav" files in the same directory as the flask app after creation (we have already inserted them) the flask app should run without issue. This can be done by calling either flask run, or python3 app.py from your terminal in the folder containing the app. The only difference between this version of the app and the one currently running on AWS is that this version runs in debug mode for developer convenience. This will run it on port 5000. The developer version deployed to AWS has this changed to run in deoyment mode on port 8080. We ran it using the command nohup python3 app.py
